@@ -1,0 +1,41 @@
+---
+# Variables for opennebula
+host_group: opennebula
+
+opennebula_db: opennebula
+opennebula_db_user: opennebula
+opennebula_db_pass: opennebula
+
+ceph_frontend: localhost
+nfs_server: 192.168.30.1
+
+ceph_pool: one
+
+vnet_name: private
+vnet_type: ranged
+vnet_network_address: 192.168.0.0
+vnet_network_mask: 255.255.255.0
+vnet_gateway: 192.168.0.1
+vnet_dns: 192.168.0.1
+vnet_ip_start: 192.168.0.2
+vnet_ip_end: 192.168.0.254
+
+datastore_name: ceph
+datastore_type: ceph
+
+# hostname of the smtp/mail relay in your domain, the domain will be appeneded by the template
+mail_hostname: mail
+
+# hostname of the ntp server in your domain, the domain will be appeneded by the template
+ntp_hostname: ntp
+
+## Site specific proxying
+proxy_server: proxy.tchpc.tcd.ie
+proxy_port: 8080
+socks_server: 134.226.112.13
+socks_port: 1080
+
+proxy_env:
+  http_proxy: ${proxy_server}:${proxy_port}
+  https_proxy: ${proxy_server}:${proxy_port}
+  ftp_proxy: ${proxy_server}:${proxy_port}

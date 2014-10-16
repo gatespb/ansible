@@ -1,0 +1,116 @@
+---
+- hosts: all;!monitoring
+  user: root
+
+  pre_tasks:
+    - name: Install dependancies
+      apt: name={{item}} state=present update-cache=yes cache_valid_time=3600
+      with_items:
+        - python-software-properties
+        - python-virtualenv
+        - python-apt
+        - linux-generic-lts-saucy
+      environment:
+        http_proxy: http://134.226.112.43:8080
+        https_proxy: http://134.226.112.43:8080
+    - group: name=cloud gid=112
+    - user: name=oneadmin uid=107 home=/var/lib/one append=yes
+    - apt: name={{item}} state=present
+      with_items:
+        - qemu-kvm
+        - libvirt-bin
+    - user: name=oneadmin uid=107 home=/var/lib/one groups=cloud,libvirtd,kvm group=cloud append=yes
+
+  roles:
+    - role: proxy
+    - role: common
+
+  post_tasks:
+    ## common step to get files on to system
+    - copy: src=files/one-debian-repo.key dest=/root/one-debian-repo.key
+    - apt_key: file=/root/one-debian-repo.key state=present
+    - copy: src=templates/opennebula.list dest=/etc/apt/sources.list.d/opennebula.list
+
+    #- name: /etc/hosts
+    #  template: src=templates/hosts dest=/etc/hosts owner=root group=root
+
+    - name: Generate_keys for root
+      user: name=root generate_ssh_key=yes
+
+    - name: Fetch generated public key from frontend root account
+      fetch: src={{item}} dest=private/root/ flat=yes
+      with_items:
+        - /root/.ssh/id_rsa.pub
+        - /root/.ssh/id_rsa
+
+    - name: Upload ssh keypair and config from the frontend node for root account
+      copy: src=private/root/{{item}} dest=/root/.ssh/{{item}} owner=root group=root mode=0600
+      with_items:
+        - id_rsa.pub
+        - id_rsa
+
+    - name: Upload ssh config
+      copy: src=files/insecure_config dest=/root/.ssh/config owner=root group=root mode=0600
+
+    - name: Install authorized_keys for root
+      authorized_key: user=root key="{{ lookup('file', 'private/root/id_rsa.pub') }}" state=present
+
+    - name: turn on arp filtering
+      copy: src=files/sysctl-arpfilter.conf dest=/etc/sysctl.d/10-arpfilter.conf owner=root group=root
+
+- hosts: opennebula_frontend
+  user: root
+
+  roles:
+    - mysql
+    - frontend
+
+- hosts: opennebula_compute
+  user: root
+
+  roles:
+    - compute
+  tasks:
+    - copy: src=files/ceph-release.asc dest=/root/ceph-release.asc
+    - apt_key: file=/root/ceph-release.asc state=present
+    - copy: src=files/ceph.list dest=/etc/apt/sources.list.d/ceph.list owner=root group=root mode=0644
+    - apt: name={{ item }} state=latest
+      with_items:
+        - ceph
+        - ceph-common
+        - ceph-fs-common
+
+# take advantage that salt remote execute can be done outside of ssh
+- hosts: all;!monitoring
+  user: root
+
+  tasks:
+    - apt_repository: repo='ppa:saltstack/salt' state=present
+    - apt: name={{item}} state=latest
+      with_items:
+        - salt-minion
+    - template: src=templates/salt/minion dest=/etc/salt/minion owner=root group=root
+    - service: name=salt-minion state=restarted
+
+- hosts: opennebula_frontend[0]
+  user: root
+  tasks:
+    - apt_repository: repo='ppa:saltstack/salt' state=present
+    - apt: name={{item}} state=latest
+      with_items:
+        - salt-master
+
+- hosts: all;!monitoring
+  user: root
+  roles:
+    - { role: xymon-client }
+
+- hosts: monitoring
+  user: root
+
+  tasks:
+     - template: src=templates/xymon-100-opennebula.cfg dest=/etc/xymon/hosts.d/100-opennebula.cfg owner=root group=root mode=0644
+
+# make sure help scripts are run
+- include: playbooks/setup-nfs-exports.yml
+- include: playbooks/setup-apparmor.yml

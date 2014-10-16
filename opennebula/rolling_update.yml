@@ -1,0 +1,29 @@
+---
+- hosts: all
+  user: root
+
+  tasks:
+    - group_by: key="{{ansible_distribution_release}}"
+
+- hosts: precise
+  user: root
+  serial: 3
+
+  tasks:
+    - apt: upgrade=yes update_cache=yes cache_valid_time=3600
+    - apt: name={{item}} state=absent
+      with_items:
+        - linux-image-3.11.0-15-generic
+        - linux-image-3.11.0-16-generic
+        - linux-image-3.11.0-17-generic
+        - linux-image-3.11.0-18-generic
+        - linux-image-3.2.0-57-generic
+        - linux-image-3.2.0-58-generic
+        - linux-image-3.2.0-59-generic
+
+- hosts: Carbon
+  user: root
+  serial: 3
+
+  tasks:
+    - command: yum upgrade -y

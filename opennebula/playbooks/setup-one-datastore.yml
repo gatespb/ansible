@@ -1,0 +1,13 @@
+# for ubuntu 12.04 hosts, run this playbook as... "ansible-playbook -i hosts PLAYBOOK.yml -k"
+---
+- hosts: opennebula_frontend
+  user: root
+
+  tasks:
+    - name: Create datastore template 
+      template: src=../templates/one/datastore/{{ datastore_type }} dest=/tmp/one_ds
+
+    - name: Create datastore
+      sudo: True
+      sudo_user: oneadmin
+      command: onedatastore create /tmp/one_ds

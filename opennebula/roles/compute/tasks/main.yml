@@ -1,0 +1,54 @@
+---
+## install kvm node
+- name: install debian packages
+  apt: name={{item}} state=latest
+  with_items:
+    - opennebula-node
+    - opennebula-common
+
+- name: install kvm dependancies
+  apt: name={{item}} state=present
+  with_items:
+    - qemu
+
+- name: install nfs dependancies
+  apt: name={{item}} state=present
+  with_items:
+    - nfs-common
+
+##TEMP COMMENT## install public/private keys, this should be shared across the ONE frontend and nodes in the oneadmin account
+##TEMP COMMENT- name: Install authorized_keys for oneadmin
+##TEMP COMMENT  authorized_key: user=oneadmin key="{{ lookup('file', '../../../private/id_rsa.pub') }}" state=present
+##TEMP COMMENT  ignore_errors: True
+##TEMP COMMENT
+##TEMP COMMENT- name: Upload ssh keypair and config from the frontend node
+##TEMP COMMENT  copy: src=../../../private/$item dest=/var/lib/one/.ssh/$item owner=oneadmin group=cloud mode=0600
+##TEMP COMMENT  with_items:
+##TEMP COMMENT    - id_rsa.pub
+##TEMP COMMENT    - id_rsa
+##TEMP COMMENT  ignore_errors: True
+##TEMP COMMENT
+##TEMP COMMENT- name: Upload ssh config
+##TEMP COMMENT  copy: src=files/insecure_config dest=/var/lib/one/.ssh/config owner=oneadmin group=cloud mode=0600
+##TEMP COMMENT  ignore_errors: True
+
+## configure the KVM driver
+- name: install qemu.conf
+  template: src=qemu.conf dest=/etc/libvirt/qemu.conf
+  notify:
+    - restart libvirt-bin
+
+- name: install libvirtd.conf
+  template: src=libvirtd.conf dest=/etc/libvirt/libvirtd.conf
+  notify:
+    - restart libvirt-bin
+
+- name: install libvirt-bin
+  template: src=libvirt-bin dest=/etc/default/libvirt-bin
+  notify:
+    - restart libvirt-bin
+
+- name: install udev rules
+  template: src=60-qemu-kvm.rules dest=/etc/udev/rules.d/60-qemu-kvm.rules
+  notify:
+    - restart udev

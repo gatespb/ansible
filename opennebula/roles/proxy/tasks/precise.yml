@@ -1,0 +1,30 @@
+---
+- name: write /etc/profile.d/proxy.sh
+  action: template src=precise/proxy.j2 dest=/etc/profile.d/proxy.sh owner=root group=root mode=0644
+
+- name: Configure apt to use a proxy
+  action: template src=precise/apt.j2 dest=/etc/apt/apt.conf.d/02proxy.conf owner=root group=root mode=0644
+
+- name: configure curlrc for root
+  action: template src=precise/curlrc.j2 dest=/root/.curlrc
+
+- name: Configure wgetrc for the system
+  action: template src=precise/wgetrc.j2 dest=/etc/wgetrc mode=0644
+
+- name: environment
+  template: src=precise/environment dest=/etc/environment owner=root group=root mode=0644
+
+- name: sudo should keep proxy environment
+  copy: src=precise/sudoers dest=/etc/sudoers.d/proxy owner=root group=root mode=0440
+
+- file: path=~/.m2/conf state=directory owner=root group=root
+
+- name: maven proxy settings
+  template: src=precise/maven3/settings.xml dest=~/.m2/settings.xml owner=root group=root
+
+- apt: name=tsocks state=present
+- template: src=precise/tsocks.conf dest=/etc/tsocks.conf owner=root group=root mode=0644
+
+#note needed anymore due to pip being completely broken, just use tsocks with pip
+- file: path=/root/.pip/ state=absent
+- file: path=/root/.pip/pip.conf state=absent

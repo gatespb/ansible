@@ -1,0 +1,55 @@
+---
+## boiler plate
+- name: Install dependancies
+  apt: name={{ item }} state=present update-cache=yes cache_valid_time=3600
+  with_items:
+    - git
+    - stgit
+    - bzr
+    - etckeeper
+    - curl
+    - ruby-json
+    - facter
+    - python-keyczar
+    - python-pycurl
+    - python-software-properties
+    - python-virtualenv
+    - python-apt
+    - unattended-upgrades
+    - tmux
+    - htop
+    - sysstat
+    - dstat
+    - vnstat
+    - supervisor
+    - sudo
+    - mailutils
+
+- copy: src=precise/10periodic  dest=/etc/apt/apt.conf.d/10periodic owner=root group=root
+
+# enable sendmail
+- apt: name=sendmail state=present
+- template: src=precise/sendmail.mc dest=/etc/mail/sendmail.mc
+  notify:
+    - restart sendmail
+
+- service: name=sendmail state=started enabled=yes
+
+# enable ntp
+- apt: name=ntp state=present
+- template: src=precise/ntp.conf dest=/etc/ntp.conf
+  notify:
+    - restart ntp
+- service: name=ntp state=started enabled=yes
+
+# enable tmpreaper
+- apt: name=tmpreaper state=present
+- copy: src=precise/tmpreaper.conf dest=/etc/tmpreaper.conf owner=root group=root
+
+# configure remote syslog
+#- template: src=precise/remote-log.conf dest=/etc/rsyslog.d/remote-log.conf mode=0644
+#  notify:
+#    - restart rsyslog
+
+- apt_repository: repo="ppa:rquillo/ansible" state=present
+- apt: name=ansible state=present cache_valid_time=3600

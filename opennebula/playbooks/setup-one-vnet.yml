@@ -1,0 +1,13 @@
+# for ubuntu 12.04 hosts, run this playbook as... "ansible-playbook -i hosts PLAYBOOK.yml -k"
+---
+- hosts: opennebula_frontend
+  user: root
+
+  tasks:
+    - name: Create vnet template 
+      template: src=../templates/one/vnet/{{ vnet_type }} dest=/tmp/one_vnet.net
+
+    - name: Create vnet
+      sudo: True
+      sudo_user: oneadmin
+      command: onevnet create /tmp/one_vnet.net
